@@ -390,6 +390,10 @@ func (c *EthashConfig) String() string {
 	return "ethash"
 }
 
+type BiHSConfig struct {
+	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
+}
+
 // CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
 type CliqueConfig struct {
 	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
