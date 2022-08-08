@@ -62,7 +62,28 @@ func (db *StateDB) Validate(blk bcore.Block) (err error) {
 	if err != nil {
 		return
 	}
-	return db.chain.PreExecuteBlock((*types.Block)(block))
+	return preExecuteBlock(db.chain, (*types.Block)(block))
+}
+
+func preExecuteBlock(bc *core.BlockChain, block *types.Block) error {
+	parent := bc.GetBlockByHash(block.ParentHash())
+	statedb, err := bc.StateAt(parent.Root())
+	if err != nil {
+		return err
+	}
+
+	txHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
+	if block.TxHash() != txHash {
+		return fmt.Errorf("invalid txHash")
+	}
+	receipts, _, usedGas, err := bc.Processor().Process(block, statedb, *bc.GetVMConfig())
+	if err != nil {
+		return err
+	}
+	if err := bc.Validator().ValidateState(block, statedb, receipts, usedGas); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (db *StateDB) MakeBlock(height uint64, mustEmpty bool) (bcore.Block, error) {

@@ -2417,24 +2417,3 @@ func (bc *BlockChain) SetBlockValidatorAndProcessorForTesting(v Validator, p Pro
 	bc.validator = v
 	bc.processor = p
 }
-
-func (bc *BlockChain) PreExecuteBlock(block *types.Block) error {
-	parent := bc.GetBlockByHash(block.ParentHash())
-	statedb, err := bc.StateAt(parent.Root())
-	if err != nil {
-		return err
-	}
-
-	txHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
-	if block.TxHash() != txHash {
-		return fmt.Errorf("invalid txHash")
-	}
-	receipts, _, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
-	if err != nil {
-		return err
-	}
-	if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-		return err
-	}
-	return nil
-}

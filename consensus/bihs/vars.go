@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -27,3 +28,5 @@ var (
 	deltaSeconds      = int64(5)
 	defaultNonce      = types.BlockNonce{}
 )
+
+var BiHSDigest = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")

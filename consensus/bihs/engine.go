@@ -190,7 +190,7 @@ func (bh *BiHS) verifyHeader(chain consensus.ChainHeaderReader, header *types.He
 		return errInvalidUncleHash
 	}
 
-	if header.MixDigest != types.BiHSDigest {
+	if header.MixDigest != BiHSDigest {
 		return errInvalidDigest
 	}
 
@@ -229,7 +229,7 @@ func (bh *BiHS) verifyHeader(chain consensus.ChainHeaderReader, header *types.He
 func (bh *BiHS) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	header.Coinbase = bh.signer.Address()
 	header.Nonce = defaultNonce
-	header.MixDigest = types.BiHSDigest
+	header.MixDigest = BiHSDigest
 	header.Extra = nil
 
 	parent, err := bh.getParentHeader(chain, header)
