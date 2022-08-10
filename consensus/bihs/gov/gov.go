@@ -18,8 +18,8 @@ func New(chain *core.BlockChain) *Governance {
 }
 
 var validators = []common.Address{
-	common.HexToAddress("0xb81aB4520565601a6904682b3c139Fc82ff22fa8"),
-	common.HexToAddress("0x49666faD0530f3A50A48Ed473104647ca2af777D"),
+	common.HexToAddress("0xde5B5Dd07C7EE63712b334EcD59E3FA173E6d56E"),
+	common.HexToAddress("0xD642f9b4c28F6bA62126144B7E26e8Cf85CB2d3a"),
 }
 
 func (g *Governance) ValidatorP2PAddrs(height uint64) []common.Address {

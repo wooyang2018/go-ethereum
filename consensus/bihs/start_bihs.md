@@ -52,9 +52,8 @@ bootnode -nodekey ./data/geth/nodekey -writeaddress
 ```
 
 启动命令
-```buildoutcfg
-./geth  --datadir ./data --networkid 121 --port 2000 --http --http.addr 0.0.0.0 --http.port 8545 --miner.gasprice 0 --mine --miner.etherbase=0x49666faD0530f3A50A48Ed473104647ca2af777D --syncmode full --nodiscover --verbosity 5
-
-./geth  --datadir ./data --networkid 121 --port 2001 --miner.gasprice 0 --mine --miner.etherbase=0x49666faD0530f3A50A48Ed473104647ca2af777D --syncmode full --nodiscover --verbosity 5
+```
+./geth  --datadir ./data --networkid 121 --port 2000 --http --http.addr 0.0.0.0 --http.port 8545  --authrpc.port=8551 --miner.gasprice 0 --mine --miner.etherbase=0xde5B5Dd07C7EE63712b334EcD59E3FA173E6d56E --syncmode full --nodiscover --verbosity 5  --authrpc.port=8551
+./geth  --datadir ./data --networkid 121 --port 2001 --authrpc.port=8552 --miner.gasprice 0 --mine --miner.etherbase=0xD642f9b4c28F6bA62126144B7E26e8Cf85CB2d3a --syncmode full --nodiscover --verbosity 5
 ```
 其中`miner.etherbase`需要跟p2p私钥`geth/nodekey`对应。
