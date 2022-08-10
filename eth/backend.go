@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/beacon"
+	"github.com/ethereum/go-ethereum/consensus/bihs"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
@@ -153,6 +154,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		log.Error("Failed to recover state", "error", err)
 	}
 	merger := consensus.NewMerger(chainDb)
+	consensusMsgCode := eth.ConsensusMsg
 	eth := &Ethereum{
 		config:            config,
 		merger:            merger,
@@ -243,6 +245,20 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
+
+	if bihs, ok := eth.engine.(*bihs.BiHS); ok {
+		saveBlock := func(block *types.Block) {
+			if eth.miner.IsPending(block.Hash()) {
+				bihs.OnBlockCommit(block)
+			} else {
+				err := eth.handler.blockFetcher.Enqueue("bihs", block)
+				if err != nil {
+					log.Trace("Enqueue block failed:%v", err)
+				}
+			}
+		}
+		bihs.Init(eth.blockchain, eth.handler, consensusMsgCode, eth.miner.PrepareEmptyHeader, saveBlock)
+	}
 
 	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), stack.Config().AllowUnprotectedTxs, eth, nil}
 	if eth.APIBackend.allowUnprotectedTxs {

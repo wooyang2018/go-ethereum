@@ -1,3 +1,11 @@
+增加了consensus/bihs
+在params/config.go中增加了BIHSconfig,params的chainConfig也增加了一个字段，同时若干参数数量不匹配也需要错误修复
+eth/ethconfig/config.go 中CreateConsensusEngine函数
+eth/backend.go中的代码也要改，增加了一段bihs初始化代码
+miner的worker.go代码case <-timer.C:也要改
+miner和worker都添加了一些函数
+关于gensis的配置文件
+
 # 关于拜占庭场景通过投票达成共识的本质思考
 
 为简化讨论，假设共有3f+1个节点，其中f个恶意节点，2f+1个诚实节点，并且这里只讨论对单个值的共识（多次迭代，即可实现对多个值的共识）。

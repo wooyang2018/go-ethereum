@@ -263,3 +263,11 @@ func (miner *Miner) GetSealingBlockSync(parent common.Hash, timestamp uint64, co
 	}
 	return <-resCh, <-errCh
 }
+
+func (miner *Miner) IsPending(hash common.Hash) bool {
+	return miner.worker.isPending(hash)
+}
+
+func (miner *Miner) PrepareEmptyHeader() *types.Header {
+	return miner.worker.PrepareEmptyHeader()
+}

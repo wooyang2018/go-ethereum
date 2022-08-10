@@ -257,3 +257,17 @@ func (ps *peerSet) close() {
 	}
 	ps.closed = true
 }
+
+func (ps *peerSet) allPeers() []*ethPeer {
+	ps.lock.Lock()
+	defer ps.lock.Unlock()
+
+	peers := make([]*ethPeer, len(ps.peers))
+	var i int
+	for _, p := range ps.peers {
+		peers[i] = p
+		i++
+	}
+
+	return peers
+}
