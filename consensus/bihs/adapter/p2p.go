@@ -3,7 +3,6 @@ package adapter
 import (
 	"github.com/ethereum/go-ethereum/common"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	"github.com/ethereum/go-ethereum/consensus/bihs/gov"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -13,7 +12,7 @@ import (
 type P2P struct {
 	bc    Broadcaster
 	chain *core.BlockChain
-	gov   *gov.Governance
+	gov   *Governance
 	ch    chan *bcore.Msg
 }
 
@@ -24,29 +23,20 @@ type Broadcaster interface {
 
 const chanSize = 20
 
-func NewP2P(bc Broadcaster, chain *core.BlockChain, gov *gov.Governance) *P2P {
+var ConsensusMsgCode uint64
+
+func NewP2P(bc Broadcaster, chain *core.BlockChain, gov *Governance) *P2P {
 	return &P2P{bc: bc, chain: chain, gov: gov, ch: make(chan *bcore.Msg, chanSize)}
 }
 
 func (p *P2P) Broadcast(msg *bcore.Msg) {
-
 	sink := ocommon.NewZeroCopySink(nil)
 	msg.Serialize(sink)
 	payload := sink.Bytes()
 	validators := p.gov.ValidatorP2PAddrs(msg.Height)
 	log.Info("Broadcast", "#payload", len(payload), "type", msg.Type, "height", msg.Height, "view", msg.View, "msg hash", msg.Hash())
 	p.bc.Multicast(validators, ConsensusMsgCode, payload)
-
-	// {
-	// 	var decodeMsg bcore.Msg
-	// 	err := decodeMsg.Deserialize(ocommon.NewZeroCopySource(payload))
-	// 	if err != nil {
-	// 		panic(fmt.Sprintf("decodeMsg.Deserialize failed:%v", err))
-	// 	}
-	// }
 }
-
-var ConsensusMsgCode uint64
 
 func (p *P2P) Send(id bcore.ID, msg *bcore.Msg) {
 	target := p.gov.ValidatorP2PAddr(common.BytesToAddress(id))
@@ -61,7 +51,6 @@ func (p *P2P) MsgCh() <-chan *bcore.Msg {
 }
 
 func (p *P2P) HandleP2pMsg(msg p2p.Msg) (err error) {
-
 	var payload []byte
 	if err = msg.Decode(&payload); err != nil {
 		return
@@ -78,9 +67,8 @@ func (p *P2P) HandleP2pMsg(msg p2p.Msg) (err error) {
 	select {
 	case p.ch <- &bihsMsg:
 	default:
-		log.Warn("p2p msg dropped because channel is ful")
+		log.Warn("p2p msg dropped because channel is full")
 	}
 
-	// TODO help propagation?
-	return nil
+	return
 }

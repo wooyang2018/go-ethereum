@@ -6,7 +6,7 @@ import (
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ontio/ontology/common"
+	ocommon "github.com/ontio/ontology/common"
 )
 
 type Block types.Block
@@ -32,7 +32,7 @@ func (b *Block) Empty() bool {
 	return len((*types.Block)(b).Transactions()) == 0
 }
 
-func (b *Block) Serialize(sink *common.ZeroCopySink) {
+func (b *Block) Serialize(sink *ocommon.ZeroCopySink) {
 	// (*types.Block)(b).EncodeRLP()
 	bytes, err := rlp.EncodeToBytes((*types.Block)(b))
 	if err != nil {
@@ -41,7 +41,7 @@ func (b *Block) Serialize(sink *common.ZeroCopySink) {
 	sink.WriteVarBytes(bytes)
 }
 
-func (b *Block) Deserialize(source *common.ZeroCopySource) error {
+func (b *Block) Deserialize(source *ocommon.ZeroCopySource) error {
 	bytes, err := source.ReadVarBytes()
 	if err != nil {
 		return fmt.Errorf("Block.Deserialize source.ReadVarBytes failed:%v", err)
@@ -53,6 +53,6 @@ func (b *Block) Header() *types.Header {
 	return (*types.Block)(b).Header()
 }
 
-func (b *Block) withSeal(header *types.Header) *types.Block {
+func (b *Block) WithSeal(header *types.Header) *types.Block {
 	return (*types.Block)(b).WithSeal(header)
 }

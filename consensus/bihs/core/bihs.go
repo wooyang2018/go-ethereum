@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	wm2 "github.com/ethereum/go-ethereum/consensus/bihs/utils"
-	"github.com/ontio/ontology/common"
+	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
+	ocommon "github.com/ontio/ontology/common"
 )
 
 // HotStuff ...
@@ -25,7 +25,7 @@ type HotStuff struct {
 	conf           Config
 	relayTimer     *time.Timer
 	nvInterrupt    *time.Timer
-	waiter         *wm2.Offset
+	waiter         *butils.Offset
 	wg             sync.WaitGroup
 	waitBlock      func(ID, *Msg)
 	lastBlockTime  uint64
@@ -39,7 +39,6 @@ type HotStuff struct {
 }
 
 func New(store StateDB, p2p P2P, conf Config) *HotStuff {
-
 	err := conf.validate()
 	if err != nil {
 		panic(fmt.Sprintf("Config.Validate failed:%v", err))
@@ -52,7 +51,7 @@ func New(store StateDB, p2p P2P, conf Config) *HotStuff {
 		p2p:            p2p,
 		store:          store,
 		conf:           conf,
-		waiter:         wm2.NewOffset(),
+		waiter:         butils.NewOffset(),
 	}
 
 	if conf.BlsSigner != nil {
@@ -75,7 +74,6 @@ func New(store StateDB, p2p P2P, conf Config) *HotStuff {
 }
 
 func (hs *HotStuff) Start() (err error) {
-
 	swapped := atomic.CompareAndSwapInt32(&hs.status, 0, 1)
 	if !swapped {
 		err = fmt.Errorf("already started")
@@ -88,7 +86,7 @@ func (hs *HotStuff) Start() (err error) {
 		return
 	}
 	hs.enterHeightView(hs.height, hs.view)
-	wm2.GoFunc(&hs.wg, hs.loop)
+	butils.GoFunc(&hs.wg, hs.loop)
 
 	return
 }
@@ -96,7 +94,6 @@ func (hs *HotStuff) Start() (err error) {
 const consensusFile = "/consensus.dat"
 
 func (hs *HotStuff) initConsensusState() (err error) {
-
 	fullPath := hs.conf.DataDir + consensusFile
 	if _, err = os.Stat(fullPath); os.IsNotExist(err) {
 		err = nil
@@ -112,7 +109,7 @@ func (hs *HotStuff) initConsensusState() (err error) {
 	}
 
 	cs := ConsensusState{}
-	err = cs.Deserialize(common.NewZeroCopySource(data))
+	err = cs.Deserialize(ocommon.NewZeroCopySource(data))
 	if err != nil {
 		hs.conf.Logger.Error("initConsensusState cs.Deserialize failed:%v", err)
 		return
@@ -135,12 +132,11 @@ func (hs *HotStuff) initConsensusState() (err error) {
 
 func (hs *HotStuff) restoreConsensusState() {
 	cs := hs.ConsensusState
-
-	sink := common.NewZeroCopySink(nil)
+	sink := ocommon.NewZeroCopySink(nil)
 	cs.Serialize(sink)
 	csBytes := sink.Bytes()
 
-	wm2.TryUntilSuccess(func() bool {
+	butils.TryUntilSuccess(func() bool {
 		err := ioutil.WriteFile(hs.conf.DataDir+consensusFile, csBytes, 0777)
 		if err != nil {
 			hs.conf.Logger.Error("restoreConsensusState failed:%v", err)

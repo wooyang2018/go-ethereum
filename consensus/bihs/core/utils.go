@@ -9,17 +9,13 @@ import (
 
 func (hs *HotStuff) createMsgEc(mt MsgType, justify *QC, node *BlockOrHash) *Msg {
 	msg := &Msg{Type: mt, Justify: justify, Node: node, Height: hs.height, View: hs.view}
-
 	msg.PartialSig = hs.sign(msg.Hash())
-
 	return msg
 }
 
 func (hs *HotStuff) createMsgBls(mt MsgType, justify *QC, node *BlockOrHash) *Msg {
 	msg := &Msg{Type: mt, Justify: justify, Node: node, Height: hs.height, View: hs.view, ID: hs.conf.ProposerID}
-
 	msg.PartialSig = hs.sign(msg.Hash())
-
 	return msg
 }
 
@@ -44,9 +40,7 @@ func (hs *HotStuff) matchingQC(qc *QC, t MsgType, v uint64) bool {
 }
 
 func (hs *HotStuff) isLeader(height, view uint64) bool {
-
 	isLeader := bytes.Equal(hs.conf.ProposerID, hs.store.SelectLeader(height, view))
-
 	return isLeader
 }
 

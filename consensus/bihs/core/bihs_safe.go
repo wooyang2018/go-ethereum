@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus/bihs/utils"
+	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
 )
 
 func (hs *HotStuff) onRecvNewView(sender ID, idx int, msg *Msg) {
@@ -205,11 +205,9 @@ func (hs *HotStuff) requestBlk(from ID, blkHash []byte) {
 }
 
 func (hs *HotStuff) onReqBlock(sender ID, idx int, msg *Msg) {
-
 	if bytes.Equal(msg.Node.Hash, hs.candidateBlk.Hash()) {
 		hs.p2p.Send(sender, hs.createMsg(MTRespBlock, nil, &BlockOrHash{Blk: hs.candidateBlk}))
 	}
-
 }
 
 func (hs *HotStuff) onRecvPrecommitVote(sender ID, idx int, msg *Msg) {
@@ -262,7 +260,7 @@ func (hs *HotStuff) onRecvCommit(sender ID, idx int, msg *Msg) {
 	}
 
 	afterGotBlk := func() {
-		utils.TryUntilSuccess(func() bool {
+		butils.TryUntilSuccess(func() bool {
 			return hs.applyBlock(hs.candidateBlk, msg.Justify) == nil
 		}, time.Second)
 		hs.conf.Logger.Infof("proposer %d onRecvCommit done", hs.idx)
@@ -299,7 +297,6 @@ func (hs *HotStuff) generateBitmapEc(votes map[int][]byte) []byte {
 }
 
 func (hs *HotStuff) generateBitmapBls(votes map[int][]byte) []byte {
-
 	bitmapSize := len(hs.voted) / 8
 	if len(hs.voted)%8 != 0 {
 		bitmapSize++
@@ -313,7 +310,6 @@ func (hs *HotStuff) generateBitmapBls(votes map[int][]byte) []byte {
 }
 
 func (hs *HotStuff) safeNode(node *BlockOrHash, qc *QC) bool {
-
 	if hs.lockQC == nil {
 		return true
 	}

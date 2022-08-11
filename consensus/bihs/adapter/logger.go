@@ -6,8 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type Logger struct {
-}
+type Logger struct{}
 
 func (l *Logger) Info(a ...interface{}) {
 	log.Info("bihs", a...)
@@ -34,7 +33,7 @@ func (l *Logger) Fatalf(format string, a ...interface{}) {
 }
 
 func (l *Logger) Error(a ...interface{}) {
-	log.Warn("bihs", a...)
+	log.Error("bihs", a...)
 }
 
 func (l *Logger) Errorf(format string, a ...interface{}) {

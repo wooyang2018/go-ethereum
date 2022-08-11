@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ontio/ontology/common"
+	ocommon "github.com/ontio/ontology/common"
 )
 
 type (
@@ -30,10 +30,11 @@ func (b HappyBlock) Empty() bool {
 	return b == EmptyBlock(b.Height())
 }
 
-func (b *HappyBlock) Serialize(sink *common.ZeroCopySink) {
+func (b *HappyBlock) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteUint64(uint64(*b))
 }
-func (b *HappyBlock) Deserialize(source *common.ZeroCopySource) error {
+
+func (b *HappyBlock) Deserialize(source *ocommon.ZeroCopySource) error {
 	data, eof := source.NextUint64()
 	if eof {
 		return fmt.Errorf("HappyBlock.Deserialize EOF")
@@ -104,6 +105,7 @@ func (db *HappyDB) StoreVoted(voted uint64) error {
 	db.voted = int64(voted)
 	return nil
 }
+
 func (db *HappyDB) GetVoted() int64 {
 	return db.voted
 }
@@ -111,6 +113,7 @@ func (db *HappyDB) GetVoted() int64 {
 func (db *HappyDB) ClearVoted() {
 	db.voted = -1
 }
+
 func (db *HappyDB) Height() uint64 {
 	if len(db.Blocks) == 0 {
 		panic("HappyDB not initialized")
@@ -129,9 +132,11 @@ func (db *HappyDB) ValidatorIndex(height uint64, peer ID) int {
 		return -1
 	}
 }
+
 func (db *HappyDB) SelectLeader(height, view uint64) ID {
 	return ID([]byte(fmt.Sprintf("%d", (height+view)%uint64(db.validators))))
 }
+
 func (db *HappyDB) MakeBlock(height uint64, mustEmpty bool) (Block, error) {
 	b := EmptyBlock(height)
 	return &b, nil
@@ -158,6 +163,7 @@ func (db *HappyDB) PKs(height uint64, bitmap []byte) interface{} {
 func NewHappyP2P() *HappyP2P {
 	return &HappyP2P{msgCh: make(chan *Msg), neibors: make(map[string]*HappyP2P)}
 }
+
 func (p *HappyP2P) Broadcast(msg *Msg) {
 	for id := range p.neibors {
 		neibor := p.neibors[id]
@@ -173,11 +179,11 @@ func (p *HappyP2P) Send(id ID, msg *Msg) {
 		return
 	}
 
-	sink := common.NewZeroCopySink(nil)
+	sink := ocommon.NewZeroCopySink(nil)
 	msg.Serialize(sink)
 
 	var decodeMsg Msg
-	err := decodeMsg.Deserialize(common.NewZeroCopySource(sink.Bytes()))
+	err := decodeMsg.Deserialize(ocommon.NewZeroCopySource(sink.Bytes()))
 	if err != nil {
 		panic(fmt.Sprintf("decodeMsg.Deserialize failed:%v", err))
 	}
@@ -186,6 +192,7 @@ func (p *HappyP2P) Send(id ID, msg *Msg) {
 		neibor.msgCh <- msg
 	}()
 }
+
 func (p *HappyP2P) MsgCh() <-chan *Msg {
 	return p.msgCh
 }

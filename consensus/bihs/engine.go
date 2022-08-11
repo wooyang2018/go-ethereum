@@ -12,8 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/bihs/adapter"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	"github.com/ethereum/go-ethereum/consensus/bihs/gov"
-	"github.com/ethereum/go-ethereum/consensus/bihs/utils"
+	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -39,7 +38,7 @@ type BiHS struct {
 	signer     *adapter.Signer
 	db         ethdb.Database
 	core       *bcore.HotStuff
-	gov        *gov.Governance
+	gov        *adapter.Governance
 	p2p        *adapter.P2P
 
 	chainHeadCh  chan core.ChainHeadEvent
@@ -63,7 +62,6 @@ func New(bihsConfig *params.BiHSConfig, nodeConfig *node.Config, db ethdb.Databa
 }
 
 func (bh *BiHS) Init(chain *ethcore.BlockChain, bc adapter.Broadcaster, consensusMsgCode int, prepareEmptyHeaderFunc func() *types.Header, saveBlockFunc func(block *types.Block)) {
-
 	adapter.ConsensusMsgCode = uint64(consensusMsgCode)
 
 	dir := path.Join(bh.nodeConfig.DataDir, "bcore")
@@ -79,8 +77,7 @@ func (bh *BiHS) Init(chain *ethcore.BlockChain, bc adapter.Broadcaster, consensu
 		DefaultBlockFunc: adapter.DefaultBlock,
 	}
 
-	governance := gov.New(chain)
-
+	governance := adapter.NewGov(chain)
 	store := adapter.NewStateDB(chain, governance, prepareEmptyHeaderFunc, saveBlockFunc, bh.VerifyHeader)
 	p2p := adapter.NewP2P(bc, chain, governance)
 
@@ -90,7 +87,7 @@ func (bh *BiHS) Init(chain *ethcore.BlockChain, bc adapter.Broadcaster, consensu
 	bh.p2p = p2p
 
 	bh.chainHeadSub = chain.SubscribeChainHeadEvent(bh.chainHeadCh)
-	utils.GoFunc(&bh.wg, func() {
+	butils.GoFunc(&bh.wg, func() {
 		for {
 			select {
 			case <-bh.chainHeadCh:
@@ -190,7 +187,7 @@ func (bh *BiHS) verifyHeader(chain consensus.ChainHeaderReader, header *types.He
 		return errInvalidUncleHash
 	}
 
-	if header.MixDigest != BiHSDigest {
+	if header.MixDigest != types.BiHSDigest {
 		return errInvalidDigest
 	}
 
@@ -229,7 +226,7 @@ func (bh *BiHS) verifyHeader(chain consensus.ChainHeaderReader, header *types.He
 func (bh *BiHS) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	header.Coinbase = bh.signer.Address()
 	header.Nonce = defaultNonce
-	header.MixDigest = BiHSDigest
+	header.MixDigest = types.BiHSDigest
 	header.Extra = nil
 
 	parent, err := bh.getParentHeader(chain, header)
@@ -274,7 +271,6 @@ func (bh *BiHS) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *t
 }
 
 func (bh *BiHS) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-
 	bh.Do(func() {
 		err := bh.core.Start()
 		if err != nil {

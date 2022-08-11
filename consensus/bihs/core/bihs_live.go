@@ -7,7 +7,6 @@ import (
 )
 
 func (hs *HotStuff) loop() {
-
 	var relayTimerCh <-chan time.Time
 
 	for {
@@ -137,7 +136,6 @@ func (hs *HotStuff) onNextSyncView() {
 }
 
 func (hs *HotStuff) applyBlock(blk Block, commitQC *QC) (err error) {
-
 	err = hs.store.StoreBlock(blk, commitQC)
 	if err != nil {
 		hs.conf.Logger.Errorf("applyBlock failed:%v", err)
@@ -215,7 +213,6 @@ func (hs *HotStuff) relayPropose() {
 	}
 	hs.onProposal(blk, nil)
 	hs.conf.Logger.Infof("proposer %d relayPropose empty", hs.idx)
-
 }
 
 func (hs *HotStuff) calcViewTimeout() time.Duration {

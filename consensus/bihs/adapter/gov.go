@@ -1,4 +1,4 @@
-package gov
+package adapter
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -13,7 +13,7 @@ type Governance struct {
 	chain *core.BlockChain
 }
 
-func New(chain *core.BlockChain) *Governance {
+func NewGov(chain *core.BlockChain) *Governance {
 	return &Governance{chain: chain}
 }
 
@@ -31,7 +31,6 @@ func (g *Governance) ValidatorP2PAddr(account common.Address) common.Address {
 }
 
 func (g *Governance) ValidatorIndex(height uint64, peer bcore.ID) int {
-
 	peerAddr := common.BytesToAddress(peer)
 	log.Info("ValidatorIndex", "peerAddr", peerAddr)
 	for i, addr := range validators {
@@ -51,8 +50,8 @@ func (g *Governance) SelectLeader(height, view uint64) bcore.ID {
 func (g *Governance) ValidatorCount(height uint64) int32 {
 	return int32(len(validators))
 }
-func (g *Governance) ValidatorIDs(height uint64) (result []bcore.ID) {
 
+func (g *Governance) ValidatorIDs(height uint64) (result []bcore.ID) {
 	for _, val := range validators {
 		val := val
 		result = append(result, val[:])

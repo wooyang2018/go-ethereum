@@ -6,24 +6,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/consensus"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	"github.com/ethereum/go-ethereum/consensus/bihs/gov"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/ontio/ontology/common"
+	ocommon "github.com/ontio/ontology/common"
 )
 
 type StateDB struct {
 	sync.RWMutex
 	chain                  *core.BlockChain
-	gov                    *gov.Governance
+	gov                    *Governance
 	prepareEmptyHeaderFunc func() *types.Header
 	saveBlockFunc          func(block *types.Block)
 	verifyHeaderFunc       func(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error
 	heightSubs             []bcore.HeightChangeSub
 }
 
-func NewStateDB(chain *core.BlockChain, gov *gov.Governance, prepareEmptyHeaderFunc func() *types.Header, saveBlockFunc func(block *types.Block), verifyHeaderFunc func(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error) *StateDB {
+func NewStateDB(chain *core.BlockChain, gov *Governance, prepareEmptyHeaderFunc func() *types.Header, saveBlockFunc func(block *types.Block), verifyHeaderFunc func(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error) *StateDB {
 	db := &StateDB{
 		chain:                  chain,
 		gov:                    gov,
@@ -36,19 +35,18 @@ func NewStateDB(chain *core.BlockChain, gov *gov.Governance, prepareEmptyHeaderF
 }
 
 func (db *StateDB) StoreBlock(blk bcore.Block, commitQC *bcore.QC) error {
-
 	if commitQC.Type != bcore.MTPreCommit {
 		return fmt.Errorf("invalid type for commitQC")
 	}
 
-	sink := common.NewZeroCopySink(nil)
+	sink := ocommon.NewZeroCopySink(nil)
 	commitQC.SerializeForHeader(sink)
 
 	block := blk.(*Block)
 	header := block.Header()
 	header.Extra = sink.Bytes()
 
-	db.saveBlockFunc(block.withSeal(header))
+	db.saveBlockFunc(block.WithSeal(header))
 	return nil
 }
 

@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ontio/ontology/common"
+	ocommon "github.com/ontio/ontology/common"
 )
 
 type ID []byte
@@ -35,8 +35,8 @@ const (
 )
 
 type Serializable interface {
-	Serialize(sink *common.ZeroCopySink)
-	Deserialize(source *common.ZeroCopySource) error
+	Serialize(sink *ocommon.ZeroCopySink)
+	Deserialize(source *ocommon.ZeroCopySource) error
 }
 
 type Msg struct {
@@ -53,7 +53,7 @@ var _ Serializable = (*Msg)(nil)
 var _ Serializable = (*BlockOrHash)(nil)
 var _ Serializable = (*QC)(nil)
 
-func (m *Msg) Serialize(sink *common.ZeroCopySink) {
+func (m *Msg) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteByte(byte(m.Type))
 	sink.WriteUint64(m.Height)
 	sink.WriteUint64(m.View)
@@ -72,7 +72,7 @@ func (m *Msg) Serialize(sink *common.ZeroCopySink) {
 	sink.WriteVarBytes(m.PartialSig)
 }
 
-func (m *Msg) Deserialize(source *common.ZeroCopySource) (err error) {
+func (m *Msg) Deserialize(source *ocommon.ZeroCopySource) (err error) {
 	t, eof := source.NextByte()
 	if eof {
 		err = fmt.Errorf("Msg.Deserialize Type EOF")
@@ -150,7 +150,7 @@ func (m *Msg) BlockHash() []byte {
 }
 
 func (m *Msg) Hash() Hash {
-	sink := common.NewZeroCopySink(nil)
+	sink := ocommon.NewZeroCopySink(nil)
 	sink.WriteByte(byte(m.Type))
 	sink.WriteUint64(m.Height)
 	sink.WriteUint64(m.View)
@@ -187,7 +187,7 @@ type QC struct {
 	Bitmap    []byte // needed for bls
 }
 
-func (qc *QC) Serialize(sink *common.ZeroCopySink) {
+func (qc *QC) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteByte(byte(qc.Type))
 	sink.WriteUint64(qc.Height)
 	sink.WriteUint64(qc.View)
@@ -196,7 +196,7 @@ func (qc *QC) Serialize(sink *common.ZeroCopySink) {
 	sink.WriteVarBytes(qc.Bitmap)
 }
 
-func (qc *QC) Deserialize(source *common.ZeroCopySource) (err error) {
+func (qc *QC) Deserialize(source *ocommon.ZeroCopySource) (err error) {
 	t, eof := source.NextByte()
 	if eof {
 		err = fmt.Errorf("QC.Deserialize Type EOF")
@@ -234,14 +234,13 @@ func (qc *QC) Deserialize(source *common.ZeroCopySource) (err error) {
 	return
 }
 
-func (qc *QC) SerializeForHeader(sink *common.ZeroCopySink) {
-
+func (qc *QC) SerializeForHeader(sink *ocommon.ZeroCopySink) {
 	sink.WriteUint64(qc.View)
 	sink.WriteVarBytes(qc.Sigs)
 	sink.WriteVarBytes(qc.Bitmap)
 }
 
-func (qc *QC) DeserializeFromHeader(height uint64, blockHash []byte, source *common.ZeroCopySource) (err error) {
+func (qc *QC) DeserializeFromHeader(height uint64, blockHash []byte, source *ocommon.ZeroCopySource) (err error) {
 	view, eof := source.NextUint64()
 	if eof {
 		err = fmt.Errorf("QC.DeserializeFromHeader View EOF")
@@ -280,7 +279,7 @@ type BlockOrHash struct {
 	Hash Hash
 }
 
-func (boh *BlockOrHash) Serialize(sink *common.ZeroCopySink) {
+func (boh *BlockOrHash) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteBool(boh.Blk != nil)
 	if boh.Blk != nil {
 		boh.Blk.Serialize(sink)
@@ -291,7 +290,7 @@ func (boh *BlockOrHash) Serialize(sink *common.ZeroCopySink) {
 
 var DefaultBlockFunc func() Block
 
-func (boh *BlockOrHash) Deserialize(source *common.ZeroCopySource) error {
+func (boh *BlockOrHash) Deserialize(source *ocommon.ZeroCopySource) error {
 	isBlk, ir, eof := source.NextBool()
 	if ir || eof {
 		return fmt.Errorf("BlockOrHash.Deserialize ir:%v eof:%v", ir, eof)
@@ -411,7 +410,7 @@ type ConsensusState struct {
 	idx             int
 }
 
-func (cs *ConsensusState) Serialize(sink *common.ZeroCopySink) {
+func (cs *ConsensusState) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteUint64(cs.height)
 	sink.WriteUint64(cs.view)
 	sink.WriteBool(cs.candidateBlk != nil)
@@ -441,7 +440,7 @@ func (cs *ConsensusState) Serialize(sink *common.ZeroCopySink) {
 	sink.WriteInt64(int64(cs.idx))
 }
 
-func (cs *ConsensusState) Deserialize(source *common.ZeroCopySource) (err error) {
+func (cs *ConsensusState) Deserialize(source *ocommon.ZeroCopySource) (err error) {
 	height, eof := source.NextUint64()
 	if eof {
 		err = fmt.Errorf("ConsensusState.Deserialize Height EOF")
