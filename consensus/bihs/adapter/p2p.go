@@ -3,7 +3,7 @@ package adapter
 import (
 	"github.com/ethereum/go-ethereum/common"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -30,7 +30,7 @@ func NewP2P(bc Broadcaster, chain *core.BlockChain, gov *Governance) *P2P {
 }
 
 func (p *P2P) Broadcast(msg *bcore.Msg) {
-	sink := ocommon.NewZeroCopySink(nil)
+	sink := bser.NewZeroCopySink(nil)
 	msg.Serialize(sink)
 	payload := sink.Bytes()
 	validators := p.gov.ValidatorP2PAddrs(msg.Height)
@@ -40,7 +40,7 @@ func (p *P2P) Broadcast(msg *bcore.Msg) {
 
 func (p *P2P) Send(id bcore.ID, msg *bcore.Msg) {
 	target := p.gov.ValidatorP2PAddr(common.BytesToAddress(id))
-	sink := ocommon.NewZeroCopySink(nil)
+	sink := bser.NewZeroCopySink(nil)
 	msg.Serialize(sink)
 	payload := sink.Bytes()
 	p.bc.Unicast(target, ConsensusMsgCode, payload)
@@ -57,7 +57,7 @@ func (p *P2P) HandleP2pMsg(msg p2p.Msg) (err error) {
 	}
 
 	var bihsMsg bcore.Msg
-	if err = bihsMsg.Deserialize(ocommon.NewZeroCopySource(payload)); err != nil {
+	if err = bihsMsg.Deserialize(bser.NewZeroCopySource(payload)); err != nil {
 		log.Info("bcore.Msg", "#payload", len(payload), "type", bihsMsg.Type, "height", bihsMsg.Height, "view", bihsMsg.View, "qc", bihsMsg.Justify)
 		return
 	}

@@ -1246,11 +1246,10 @@ func (w *worker) PrepareEmptyHeader() *types.Header {
 	defer w.mu.RUnlock()
 
 	parent := w.chain.CurrentBlock()
-	header := w.prepareHeaderLocked(parent, 0)
+	header := w.prepareHeader(parent)
 	if header != nil {
 		// make empty header deterministic
 		header.Coinbase = common.Address{}
-		header.Time = parent.Time() + 1
 		header.GasLimit = parent.GasLimit()
 		header.Root = parent.Root()
 		header.ReceiptHash = types.EmptyRootHash
@@ -1260,18 +1259,14 @@ func (w *worker) PrepareEmptyHeader() *types.Header {
 	return header
 }
 
-func (w *worker) prepareHeaderLocked(parent *types.Block, timestamp int64) *types.Header {
-
-	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 1)
-	}
+func (w *worker) prepareHeader(parent *types.Block) *types.Header {
 	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent.GasLimit(), w.config.GasCeil),
 		Extra:      w.extra,
-		Time:       uint64(timestamp),
+		Time:       parent.Time() + 1,
 	}
 	// Set baseFee and GasLimit if we are on an EIP-1559 chain
 	if w.chainConfig.IsLondon(header.Number) {

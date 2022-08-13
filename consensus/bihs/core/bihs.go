@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
 )
 
@@ -109,7 +109,7 @@ func (hs *HotStuff) initConsensusState() (err error) {
 	}
 
 	cs := ConsensusState{}
-	err = cs.Deserialize(ocommon.NewZeroCopySource(data))
+	err = cs.Deserialize(bser.NewZeroCopySource(data))
 	if err != nil {
 		hs.conf.Logger.Error("initConsensusState cs.Deserialize failed:%v", err)
 		return
@@ -132,7 +132,7 @@ func (hs *HotStuff) initConsensusState() (err error) {
 
 func (hs *HotStuff) restoreConsensusState() {
 	cs := hs.ConsensusState
-	sink := ocommon.NewZeroCopySink(nil)
+	sink := bser.NewZeroCopySink(nil)
 	cs.Serialize(sink)
 	csBytes := sink.Bytes()
 

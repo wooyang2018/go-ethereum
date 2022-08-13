@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/consensus"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
@@ -39,7 +39,7 @@ func (db *StateDB) StoreBlock(blk bcore.Block, commitQC *bcore.QC) error {
 		return fmt.Errorf("invalid type for commitQC")
 	}
 
-	sink := ocommon.NewZeroCopySink(nil)
+	sink := bser.NewZeroCopySink(nil)
 	commitQC.SerializeForHeader(sink)
 
 	block := blk.(*Block)

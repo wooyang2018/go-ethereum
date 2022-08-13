@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/bihs/adapter"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
@@ -210,7 +210,7 @@ func (bh *BiHS) verifyHeader(chain consensus.ChainHeaderReader, header *types.He
 	} else {
 		var qc bcore.QC
 		hash := header.Hash()
-		err := qc.DeserializeFromHeader(header.Number.Uint64(), hash[:], ocommon.NewZeroCopySource(header.Extra))
+		err := qc.DeserializeFromHeader(header.Number.Uint64(), hash[:], bser.NewZeroCopySource(header.Extra))
 		if err != nil {
 			return err
 		}

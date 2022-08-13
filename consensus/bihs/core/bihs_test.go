@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 )
 
 type (
@@ -30,11 +30,11 @@ func (b HappyBlock) Empty() bool {
 	return b == EmptyBlock(b.Height())
 }
 
-func (b *HappyBlock) Serialize(sink *ocommon.ZeroCopySink) {
+func (b *HappyBlock) Serialize(sink *bser.ZeroCopySink) {
 	sink.WriteUint64(uint64(*b))
 }
 
-func (b *HappyBlock) Deserialize(source *ocommon.ZeroCopySource) error {
+func (b *HappyBlock) Deserialize(source *bser.ZeroCopySource) error {
 	data, eof := source.NextUint64()
 	if eof {
 		return fmt.Errorf("HappyBlock.Deserialize EOF")
@@ -179,11 +179,11 @@ func (p *HappyP2P) Send(id ID, msg *Msg) {
 		return
 	}
 
-	sink := ocommon.NewZeroCopySink(nil)
+	sink := bser.NewZeroCopySink(nil)
 	msg.Serialize(sink)
 
 	var decodeMsg Msg
-	err := decodeMsg.Deserialize(ocommon.NewZeroCopySource(sink.Bytes()))
+	err := decodeMsg.Deserialize(bser.NewZeroCopySource(sink.Bytes()))
 	if err != nil {
 		panic(fmt.Sprintf("decodeMsg.Deserialize failed:%v", err))
 	}

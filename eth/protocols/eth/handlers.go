@@ -21,9 +21,11 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/bihs"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -525,4 +527,13 @@ func handlePooledTransactions66(backend Backend, msg Decoder, peer *Peer) error 
 	requestTracker.Fulfil(peer.id, peer.version, PooledTransactionsMsg, txs.RequestId)
 
 	return backend.Handle(peer, &txs.PooledTransactionsPacket)
+}
+
+func handleBiHSConsensusMsg(backend Backend, msg Decoder, peer *Peer) error {
+	if engine, ok := backend.Chain().Engine().(*bihs.BiHS); ok {
+		if rawMsg, ok := msg.(p2p.Msg); ok {
+			return engine.HandleP2pMsg(rawMsg)
+		}
+	}
+	return fmt.Errorf("unknown msg for current engine")
 }

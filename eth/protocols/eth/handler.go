@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/bihs"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -180,6 +179,7 @@ var eth66 = map[uint64]msgHandler{
 	ReceiptsMsg:                   handleReceipts66,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions66,
 	PooledTransactionsMsg:         handlePooledTransactions66,
+	BiHSConsensusMsg:              handleBiHSConsensusMsg,
 }
 
 var eth67 = map[uint64]msgHandler{
@@ -195,6 +195,7 @@ var eth67 = map[uint64]msgHandler{
 	ReceiptsMsg:                   handleReceipts66,
 	GetPooledTransactionsMsg:      handleGetPooledTransactions66,
 	PooledTransactionsMsg:         handlePooledTransactions66,
+	BiHSConsensusMsg:              handleBiHSConsensusMsg,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote
@@ -214,13 +215,7 @@ func handleMessage(backend Backend, peer *Peer) error {
 	if peer.Version() >= ETH67 {
 		handlers = eth67
 	}
-	if msg.Code == ConsensusMsg {
-		if engine, ok := backend.Chain().Engine().(*bihs.BiHS); ok {
-			return engine.HandleP2pMsg(msg)
-		} else {
-			return fmt.Errorf("unknown msg for current engine")
-		}
-	}
+
 	// Track the amount of time it takes to serve the request and run the handler
 	if metrics.Enabled {
 		h := fmt.Sprintf("%s/%s/%d/%#02x", p2p.HandleHistName, ProtocolName, peer.Version(), msg.Code)

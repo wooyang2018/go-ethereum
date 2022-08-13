@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
-	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
+	bser "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -32,7 +32,7 @@ func (b *Block) Empty() bool {
 	return len((*types.Block)(b).Transactions()) == 0
 }
 
-func (b *Block) Serialize(sink *ocommon.ZeroCopySink) {
+func (b *Block) Serialize(sink *bser.ZeroCopySink) {
 	// (*types.Block)(b).EncodeRLP()
 	bytes, err := rlp.EncodeToBytes((*types.Block)(b))
 	if err != nil {
@@ -41,7 +41,7 @@ func (b *Block) Serialize(sink *ocommon.ZeroCopySink) {
 	sink.WriteVarBytes(bytes)
 }
 
-func (b *Block) Deserialize(source *ocommon.ZeroCopySource) error {
+func (b *Block) Deserialize(source *bser.ZeroCopySource) error {
 	bytes, err := source.ReadVarBytes()
 	if err != nil {
 		return fmt.Errorf("Block.Deserialize source.ReadVarBytes failed:%v", err)

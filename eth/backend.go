@@ -154,7 +154,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		log.Error("Failed to recover state", "error", err)
 	}
 	merger := consensus.NewMerger(chainDb)
-	consensusMsgCode := eth.ConsensusMsg
+	consensusMsgCode := eth.BiHSConsensusMsg
 	eth := &Ethereum{
 		config:            config,
 		merger:            merger,
