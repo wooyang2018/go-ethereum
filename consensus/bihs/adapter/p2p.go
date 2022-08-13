@@ -3,10 +3,10 @@ package adapter
 import (
 	"github.com/ethereum/go-ethereum/common"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
-	ocommon "github.com/ontio/ontology/common"
 )
 
 type P2P struct {

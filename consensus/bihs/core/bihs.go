@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
-	ocommon "github.com/ontio/ontology/common"
 )
 
 // HotStuff ...

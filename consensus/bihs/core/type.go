@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	ocommon "github.com/ontio/ontology/common"
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 )
 
 type ID []byte

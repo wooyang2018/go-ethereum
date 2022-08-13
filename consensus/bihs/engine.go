@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/bihs/adapter"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	butils "github.com/ethereum/go-ethereum/consensus/bihs/utils"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
-	ocommon "github.com/ontio/ontology/common"
 )
 
 type BiHS struct {

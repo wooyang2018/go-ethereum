@@ -6,10 +6,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/consensus"
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
-	ocommon "github.com/ontio/ontology/common"
 )
 
 type StateDB struct {

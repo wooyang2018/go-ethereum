@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	bcore "github.com/ethereum/go-ethereum/consensus/bihs/core"
+	ocommon "github.com/ethereum/go-ethereum/consensus/bihs/serialization"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	ocommon "github.com/ontio/ontology/common"
 )
 
 type Block types.Block
