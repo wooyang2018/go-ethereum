@@ -141,9 +141,22 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine := ethconfig.CreateConsensusEngine(stack, &ethashConfig, cliqueConfig, config.Miner.Notify, config.Miner.Noverify, chainDb)
+
+	chainConfig, _, genesisErr := core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, nil)
+	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
+		return nil, genesisErr
+	}
+
+	var engine consensus.Engine
+	if chainConfig.BiHS != nil {
+		log.Info("new bihs consensus engine")
+		engine = bihs.New(chainConfig.BiHS, stack.Config(), chainDb)
+	} else {
+		engine = ethconfig.CreateConsensusEngine(stack, &ethashConfig, cliqueConfig, config.Miner.Notify, config.Miner.Noverify, chainDb)
+	}
 
 	consensusMsgCode := eth.BiHSConsensusMsg
+
 	eth := &Ethereum{
 		config:            config,
 		merger:            consensus.NewMerger(chainDb),
