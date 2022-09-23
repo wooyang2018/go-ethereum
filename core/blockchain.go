@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -39,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/internal/syncx"
+	"github.com/ethereum/go-ethereum/internal/version"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/params"
@@ -218,7 +221,7 @@ type BlockChain struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator
 // and Processor.
-func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(header *types.Header) bool, txLookupLimit *uint64) (*BlockChain, error) {
+func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, genesis *Genesis, overrides *ChainOverrides, engine consensus.Engine, vmConfig vm.Config, shouldPreserve func(header *types.Header) bool, txLookupLimit *uint64) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = defaultCacheConfig
 	}
@@ -228,6 +231,21 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	blockCache, _ := lru.New(blockCacheLimit)
 	txLookupCache, _ := lru.New(txLookupCacheLimit)
 	futureBlocks, _ := lru.New(maxFutureBlocks)
+
+	// Setup the genesis block, commit the provided genesis specification
+	// to database if the genesis block is not present yet, or load the
+	// stored one from database.
+	chainConfig, genesisHash, genesisErr := SetupGenesisBlockWithOverride(db, genesis, overrides)
+	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
+		return nil, genesisErr
+	}
+	log.Info("")
+	log.Info(strings.Repeat("-", 153))
+	for _, line := range strings.Split(chainConfig.Description(), "\n") {
+		log.Info(line)
+	}
+	log.Info(strings.Repeat("-", 153))
+	log.Info("")
 
 	bc := &BlockChain{
 		chainConfig: chainConfig,
@@ -408,6 +426,12 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 			defer bc.wg.Done()
 			triedb.SaveCachePeriodically(bc.cacheConfig.TrieCleanJournal, bc.cacheConfig.TrieCleanRejournal, bc.quit)
 		}()
+	}
+	// Rewind the chain in case of an incompatible config upgrade.
+	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
+		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
+		bc.SetHead(compat.RewindTo)
+		rawdb.WriteChainConfig(db, genesisHash, chainConfig)
 	}
 	return bc, nil
 }
@@ -893,6 +917,10 @@ func (bc *BlockChain) Stop() {
 			log.Error("Dangling trie nodes after full cleanup")
 		}
 	}
+	// Flush the collected preimages to disk
+	if err := bc.stateCache.TrieDB().CommitPreimages(); err != nil {
+		log.Error("Failed to commit trie preimages", "err", err)
+	}
 	// Ensure all live cached entries be saved into disk, so that we can skip
 	// cache warmup when node restarts.
 	if bc.cacheConfig.TrieCleanJournal != "" {
@@ -1371,7 +1399,7 @@ func (bc *BlockChain) writeBlockAndSetHead(block *types.Block, receipts []*types
 		}
 		// In theory we should fire a ChainHeadEvent when we inject
 		// a canonical block, but sometimes we can insert a batch of
-		// canonicial blocks. Avoid firing too many ChainHeadEvents,
+		// canonical blocks. Avoid firing too many ChainHeadEvents,
 		// we will fire an accumulated ChainHeadEvent and disable fire
 		// event here.
 		if emitHeadEvent {
@@ -1608,7 +1636,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals, setHead bool)
 			// block in the middle. It can only happen in the clique chain. Whenever
 			// we insert blocks via `insertSideChain`, we only commit `td`, `header`
 			// and `body` if it's non-existent. Since we don't have receipts without
-			// reexecution, so nothing to commit. But if the sidechain will be adpoted
+			// reexecution, so nothing to commit. But if the sidechain will be adopted
 			// as the canonical chain eventually, it needs to be reexecuted for missing
 			// state, but if it's this special case here(skip reexecution) we will lose
 			// the empty receipt entry.
@@ -1974,21 +2002,6 @@ func (bc *BlockChain) collectLogs(hash common.Hash, removed bool) []*types.Log {
 	return logs
 }
 
-// mergeLogs returns a merged log slice with specified sort order.
-func mergeLogs(logs [][]*types.Log, reverse bool) []*types.Log {
-	var ret []*types.Log
-	if reverse {
-		for i := len(logs) - 1; i >= 0; i-- {
-			ret = append(ret, logs[i]...)
-		}
-	} else {
-		for i := 0; i < len(logs); i++ {
-			ret = append(ret, logs[i]...)
-		}
-	}
-	return ret
-}
-
 // reorg takes two blocks, an old chain and a new chain and will reconstruct the
 // blocks and inserts them to be part of the new canonical chain and accumulates
 // potential missing transactions and post an event about them.
@@ -2002,9 +2015,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 
 		deletedTxs []common.Hash
 		addedTxs   []common.Hash
-
-		deletedLogs [][]*types.Log
-		rebirthLogs [][]*types.Log
 	)
 	// Reduce the longer chain to the same number as the shorter one
 	if oldBlock.NumberU64() > newBlock.NumberU64() {
@@ -2013,12 +2023,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 			oldChain = append(oldChain, oldBlock)
 			for _, tx := range oldBlock.Transactions() {
 				deletedTxs = append(deletedTxs, tx.Hash())
-			}
-
-			// Collect deleted logs for notification
-			logs := bc.collectLogs(oldBlock.Hash(), true)
-			if len(logs) > 0 {
-				deletedLogs = append(deletedLogs, logs)
 			}
 		}
 	} else {
@@ -2045,12 +2049,6 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		oldChain = append(oldChain, oldBlock)
 		for _, tx := range oldBlock.Transactions() {
 			deletedTxs = append(deletedTxs, tx.Hash())
-		}
-
-		// Collect deleted logs for notification
-		logs := bc.collectLogs(oldBlock.Hash(), true)
-		if len(logs) > 0 {
-			deletedLogs = append(deletedLogs, logs)
 		}
 		newChain = append(newChain, newBlock)
 
@@ -2125,28 +2123,42 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		log.Crit("Failed to delete useless indexes", "err", err)
 	}
 
-	// Collect the logs
-	for i := len(newChain) - 1; i >= 1; i-- {
-		// Collect reborn logs due to chain reorg
-		logs := bc.collectLogs(newChain[i].Hash(), false)
-		if len(logs) > 0 {
-			rebirthLogs = append(rebirthLogs, logs)
+	// Send out events for logs from the old canon chain, and 'reborn'
+	// logs from the new canon chain. The number of logs can be very
+	// high, so the events are sent in batches of size around 512.
+
+	// Deleted logs + blocks:
+	var deletedLogs []*types.Log
+	for i := len(oldChain) - 1; i >= 0; i-- {
+		// Also send event for blocks removed from the canon chain.
+		bc.chainSideFeed.Send(ChainSideEvent{Block: oldChain[i]})
+
+		// Collect deleted logs for notification
+		if logs := bc.collectLogs(oldChain[i].Hash(), true); len(logs) > 0 {
+			deletedLogs = append(deletedLogs, logs...)
+		}
+		if len(deletedLogs) > 512 {
+			bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
+			deletedLogs = nil
 		}
 	}
-	// If any logs need to be fired, do it now. In theory we could avoid creating
-	// this goroutine if there are no events to fire, but realistcally that only
-	// ever happens if we're reorging empty blocks, which will only happen on idle
-	// networks where performance is not an issue either way.
 	if len(deletedLogs) > 0 {
-		bc.rmLogsFeed.Send(RemovedLogsEvent{mergeLogs(deletedLogs, true)})
+		bc.rmLogsFeed.Send(RemovedLogsEvent{deletedLogs})
+	}
+
+	// New logs:
+	var rebirthLogs []*types.Log
+	for i := len(newChain) - 1; i >= 1; i-- {
+		if logs := bc.collectLogs(newChain[i].Hash(), false); len(logs) > 0 {
+			rebirthLogs = append(rebirthLogs, logs...)
+		}
+		if len(rebirthLogs) > 512 {
+			bc.logsFeed.Send(rebirthLogs)
+			rebirthLogs = nil
+		}
 	}
 	if len(rebirthLogs) > 0 {
-		bc.logsFeed.Send(mergeLogs(rebirthLogs, false))
-	}
-	if len(oldChain) > 0 {
-		for i := len(oldChain) - 1; i >= 0; i-- {
-			bc.chainSideFeed.Send(ChainSideEvent{Block: oldChain[i]})
-		}
+		bc.logsFeed.Send(rebirthLogs)
 	}
 	return nil
 }
@@ -2365,24 +2377,32 @@ func (bc *BlockChain) maintainTxIndex(ancients uint64) {
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	rawdb.WriteBadBlock(bc.db, block)
+	log.Error(summarizeBadBlock(block, receipts, bc.Config(), err))
+}
 
+// summarizeBadBlock returns a string summarizing the bad block and other
+// relevant information.
+func summarizeBadBlock(block *types.Block, receipts []*types.Receipt, config *params.ChainConfig, err error) string {
 	var receiptString string
 	for i, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v bloom: %x state: %x\n",
+		receiptString += fmt.Sprintf("\n  %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v bloom: %x state: %x",
 			i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
 			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
 	}
-	log.Error(fmt.Sprintf(`
+	version, vcs := version.Info()
+	platform := fmt.Sprintf("%s %s %s %s", version, runtime.Version(), runtime.GOARCH, runtime.GOOS)
+	if vcs != "" {
+		vcs = fmt.Sprintf("\nVCS: %s", vcs)
+	}
+	return fmt.Sprintf(`
 ########## BAD BLOCK #########
-Chain config: %v
-
-Number: %v
-Hash: %#x
-%v
-
+Block: %v (%#x)
 Error: %v
+Platform: %v%v
+Chain config: %#v
+Receipts: %v
 ##############################
-`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+`, block.Number(), block.Hash(), err, platform, vcs, config, receiptString)
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local

@@ -117,6 +117,7 @@ var (
 		utils.CacheSnapshotFlag,
 		utils.CacheNoPrefetchFlag,
 		utils.CachePreimagesFlag,
+		utils.CacheLogSizeFlag,
 		utils.FDLimitFlag,
 		utils.ListenPortFlag,
 		utils.DiscoveryPortFlag,
@@ -240,6 +241,8 @@ func init() {
 		utils.ShowDeprecated,
 		// See snapshot.go
 		snapshotCommand,
+		// See verkle.go
+		verkleCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 

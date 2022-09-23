@@ -79,7 +79,10 @@ func (beacon *Beacon) Author(header *types.Header) (common.Address, error) {
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum consensus engine.
 func (beacon *Beacon) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	reached, _ := IsTTDReached(chain, header.ParentHash, header.Number.Uint64()-1)
+	reached, err := IsTTDReached(chain, header.ParentHash, header.Number.Uint64()-1)
+	if err != nil {
+		return err
+	}
 	if !reached {
 		return beacon.ethone.VerifyHeader(chain, header, seal)
 	}
@@ -114,8 +117,19 @@ func (beacon *Beacon) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 		}
 	}
 
-	// All the headers have passed the transition point, use new rules.
 	if len(preHeaders) == 0 {
+		// All the headers are pos headers. Verify that the parent block reached total terminal difficulty.
+		if reached, err := IsTTDReached(chain, headers[0].ParentHash, headers[0].Number.Uint64()-1); !reached {
+			// TTD not reached for the first block, mark subsequent with invalid terminal block
+			if err == nil {
+				err = consensus.ErrInvalidTerminalBlock
+			}
+			results := make(chan error, len(headers))
+			for i := 0; i < len(headers); i++ {
+				results <- err
+			}
+			return make(chan struct{}), results
+		}
 		return beacon.verifyHeaders(chain, headers, nil)
 	}
 
@@ -210,10 +224,11 @@ func (beacon *Beacon) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // verifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum consensus engine. The difference between the beacon and classic is
 // (a) The following fields are expected to be constants:
-//     - difficulty is expected to be 0
-// 	   - nonce is expected to be 0
-//     - unclehash is expected to be Hash(emptyHeader)
+//   - difficulty is expected to be 0
+//   - nonce is expected to be 0
+//   - unclehash is expected to be Hash(emptyHeader)
 //     to be the desired constants
+//
 // (b) we don't verify if a block is in the future anymore
 // (c) the extradata is limited to 32 bytes
 func (beacon *Beacon) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header) error {

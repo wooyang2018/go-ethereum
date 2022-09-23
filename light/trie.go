@@ -96,6 +96,10 @@ func (db *odrDatabase) TrieDB() *trie.Database {
 	return nil
 }
 
+func (db *odrDatabase) DiskDB() ethdb.KeyValueStore {
+	panic("not implemented")
+}
+
 type odrTrie struct {
 	db   *odrDatabase
 	id   *TrieID
@@ -147,6 +151,14 @@ func (t *odrTrie) TryUpdate(key, value []byte) error {
 }
 
 func (t *odrTrie) TryDelete(key []byte) error {
+	key = crypto.Keccak256(key)
+	return t.do(key, func() error {
+		return t.trie.TryDelete(key)
+	})
+}
+
+// TryDeleteAccount abstracts an account deletion from the trie.
+func (t *odrTrie) TryDeleteAccount(key []byte) error {
 	key = crypto.Keccak256(key)
 	return t.do(key, func() error {
 		return t.trie.TryDelete(key)

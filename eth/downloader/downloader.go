@@ -364,7 +364,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 	// The beacon header syncer is async. It will start this synchronization and
 	// will continue doing other tasks. However, if synchronization needs to be
 	// cancelled, the syncer needs to know if we reached the startup point (and
-	// inited the cancel cannel) or not yet. Make sure that we'll signal even in
+	// inited the cancel channel) or not yet. Make sure that we'll signal even in
 	// case of a failure.
 	if beaconPing != nil {
 		defer func() {
@@ -741,9 +741,11 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 // calculateRequestSpan calculates what headers to request from a peer when trying to determine the
 // common ancestor.
 // It returns parameters to be used for peer.RequestHeadersByNumber:
-//  from - starting block number
-//  count - number of headers to request
-//  skip - number of headers to skip
+//
+//	from  - starting block number
+//	count - number of headers to request
+//	skip  - number of headers to skip
+//
 // and also returns 'max', the last block which is expected to be returned by the remote peers,
 // given the (from,count,skip)
 func calculateRequestSpan(remoteHeight, localHeight uint64) (int64, int, int, uint64) {
@@ -1461,7 +1463,7 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 			}
 			d.syncStatsLock.Unlock()
 
-			// Signal the content downloaders of the availablility of new tasks
+			// Signal the content downloaders of the availability of new tasks
 			for _, ch := range []chan bool{d.queue.blockWakeCh, d.queue.receiptWakeCh} {
 				select {
 				case ch <- true:
